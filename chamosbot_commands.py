@@ -1,4 +1,5 @@
 import datetime
+import uuid
 import re
 import statistics
 
@@ -9,8 +10,19 @@ import iksm
 import splatoon
 import tools
 
+class Support(commands.Cog):
+    '''Commands for help and support from developers.
+    '''
+
+    @commands.command(aliases=['report', 'bug'])
+    async def issue(self, ctx):
+        '''Contact developer.
+        '''
+        await ctx.author.send('Please DM <@580157651548241940> with details about your error, suggestion, etc.')
+
+
 class Bedwars(commands.Cog):
-    '''Commands for Minecraft Hypixel Bedwars
+    '''Commands for Minecraft Hypixel Bedwars.
     '''
 
     @commands.command(aliases=['bw'])
@@ -131,12 +143,14 @@ class Splatoon(commands.Cog):
     @commands.command()
     async def register(self, ctx):
         '''Receive a Nintendo login link through DM's to link your Nintendo account to your Discord account.
+        For help: https://youtu.be/4RD-3L7_vQI
         '''
         await ctx.author.send(iksm.log_in(ctx))
 
     @commands.command()
     async def link(self, ctx, nintendo_url):
         '''Link your Nintendo account to your Discord with the link you received with >register.
+        For help: https://youtu.be/4RD-3L7_vQI
         '''
         await ctx.author.send(iksm.check_link(ctx, nintendo_url))
 
@@ -221,6 +235,12 @@ class Development(commands.Cog):
         result = tools.get_ip_address().split('.')[-1]
         await ctx.channel.send(result)
 
+    @commands.command()
+    async def uuid(self, ctx):
+        '''Generate a UUID using Python's uuid.uuid4 function.
+        '''
+        await ctx.channel.send(str(uuid.uuid4()))
 
-COGS = [Bedwars, Splatoon, Development]
+
+COGS = [Bedwars, Splatoon, Development, Support]
 

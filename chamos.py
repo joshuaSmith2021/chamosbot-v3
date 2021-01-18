@@ -16,6 +16,7 @@ bot = commands.Bot(command_prefix='>')
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user}')
+    bot.help_command.cog = cbc.Support()
     activity = discord.Activity(name='>help', type=discord.ActivityType.listening)
     await bot.change_presence(activity=activity)
 

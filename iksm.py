@@ -90,6 +90,7 @@ def log_in(ctx, ver='1.5.7'):
     message_lines.append(post_login)
     message_lines.append("Log in, right click the \"Select this account\" button, copy the link address, and use the following command:")
     message_lines.append("`>link <your url>`")
+    message_lines.append('For help: https://youtu.be/4RD-3L7_vQI')
 
     user_data = {
         str(ctx.author.id): {

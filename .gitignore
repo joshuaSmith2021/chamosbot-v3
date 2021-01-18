@@ -1,0 +1,7 @@
+__pycache__/
+.vscode/
+env/
+ideas/
+credentials.json
+data/users/
+manage/

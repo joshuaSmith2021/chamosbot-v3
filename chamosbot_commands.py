@@ -170,7 +170,7 @@ class Splatoon(commands.Cog):
         match_args = [x for x in args if x.isnumeric()]
         match_count = 5 if len(match_args) == 0 else match_args[0]
 
-        if (aid := ctx.author.id) not in user_ids:
+        if (aid := ctx.author.id) not in user_ids and len(user_ids) == 0:
             user_ids.append(aid)
 
         unregistered_users = []
@@ -219,6 +219,15 @@ class Splatoon(commands.Cog):
             ('Favorite Weapon', get_favorite_weapon)
         ]
 
+        if len(user_data) == 1:
+            user = user_data[0]
+            embed = discord.Embed(title=(await get_usernames(user)), description='Recent Stats', color=random.choice(splatoon.COLORS))
+            for field, func in rows[1:]:
+                embed.add_field(name=field, value=(await func(user)), inline=True)
+
+            await ctx.channel.send(embed=embed)
+            return
+
         result = tools.Table(just='right')
         for title, func in rows:
             result.append([title, *[(await func(x)) for x in user_data]])
@@ -237,7 +246,7 @@ class Splatoon(commands.Cog):
         mention_matches = [x for x in args if re.match(mention_pattern, x) is not None]
         user_ids = [int(re.match(mention_pattern, x).group(1)) for x in mention_matches]
 
-        if (aid := ctx.author.id) not in user_ids:
+        if (aid := ctx.author.id) not in user_ids and len(user_ids) == 0:
             user_ids.append(aid)
 
         unregistered_users = []

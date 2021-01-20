@@ -13,6 +13,8 @@ with open('data/splatoon2/gamemodes.json') as file_:
 with open('data/splatoon2/rulesets.json') as file_:
     RULESETS = json.loads(file_.read())
 
+COLORS = [0xfa5a00, 0x2851f6, 0xc800dc, 0xf93195, 0x00c8b4, 0xa0cc0a]
+
 class Stage:
     name = None
     sid = None
@@ -222,6 +224,24 @@ def get_past_games(cookie):
     return req.json()
 
 
+def get_records(cookie):
+    url = 'https://app.splatoon2.nintendo.net/api/records'
+    req = requests.get(url, cookies={'iksm_session': cookie})
+    return req.json()
+
+
+def get_ranks(records):
+    modes = [
+        ('Splat Zones', 'udemae_zones'),
+        ('Tower Control', 'udemae_tower'),
+        ('Rainmaker', 'udemae_rainmaker'),
+        ('Clam Blitz', 'udemae_clam')
+    ]
+
+    return {display: records['records']['player'][key]['name'] for display, key in modes}
+
+
 if __name__ == '__main__':
-    events = get_schedule_objects()
-    print(events)
+    records = get_records('04d5fb0f23e9d12a8164cdfc0eb028df06a766e4')
+    print(get_ranks(records))
+

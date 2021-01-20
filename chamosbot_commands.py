@@ -1,8 +1,10 @@
 import datetime
-import uuid
+import random
 import re
 import statistics
+import uuid
 
+import discord
 from discord.ext import commands
 
 import hypixel
@@ -196,9 +198,10 @@ class Splatoon(commands.Cog):
             user_data[i]['results'] = results
 
         async def get_form(x):
-            text = ''.join([x.symbol for x in x['results']['matches'][:5]])
+            symbols = ''.join([x.symbol for x in x['results']['matches']])
+            text = symbols[:5]
             streak_pattern = f'^{text[0]}+'
-            streak = len(re.search(streak_pattern, text).group())
+            streak = len(re.search(streak_pattern, symbols).group())
             return f'{text} ({streak}{text[0]} streak)'
 
         async def get_usernames(x):
@@ -219,6 +222,73 @@ class Splatoon(commands.Cog):
         result = tools.Table(just='right')
         for title, func in rows:
             result.append([title, *[(await func(x)) for x in user_data]])
+
+        await ctx.channel.send(f'```{str(result)}```')
+
+    @commands.command(aliases=['ranking'])
+    async def rank(self, ctx, *args):
+        '''Get ranks for users.
+        args is multiple arguments separated by spaces. Each argument must be a:
+        Discord user mention (@user): If the mentioned user has linked their Nintendo account to Discord
+        If multiple users are given, the response is formatted in a table with all of their ranks side-by-side.
+        If one user is given, the response is a prettier embed with their rankings.
+        '''
+        mention_pattern = r'<@!?(\d+)>'
+        mention_matches = [x for x in args if re.match(mention_pattern, x) is not None]
+        user_ids = [int(re.match(mention_pattern, x).group(1)) for x in mention_matches]
+
+        if (aid := ctx.author.id) not in user_ids:
+            user_ids.append(aid)
+
+        unregistered_users = []
+        user_data = []
+        for uid in user_ids:
+            data = iksm.get_user(uid)
+            if data is None:
+                unregistered_users.append(uid)
+                continue
+
+            user_data.append(dict(uid=uid, **data))
+
+        for i, data in enumerate(user_data):
+            if data.get('cookie', None) is None:
+                del user_data[i]
+                unregistered_users.append(data['uid'])
+
+        if len(user_data) == 0:
+            await ctx.channel.send('None of the given users have linked their accounts with chamosbot. See `>help register` for more details.')
+            return
+
+        for i, user in enumerate(user_data):
+            records = splatoon.get_records(user['cookie'])
+            user_data[i]['ranks'] = splatoon.get_ranks(records)
+
+        if len(user_data) == 1:
+            # Only one user given, send pretty embed
+            user = user_data[0]
+            embed = discord.Embed(title=(await ctx.bot.fetch_user(int(user['uid']))).name, description='Splatoon 2 Ranking', color=random.choice(splatoon.COLORS))
+            for mode in user['ranks'].keys():
+                embed.add_field(name=mode, value=user['ranks'][mode], inline=True)
+
+            await ctx.channel.send(embed=embed)
+            return
+
+        async def get_username(x):
+            return (await ctx.bot.fetch_user(int(x['uid']))).name
+
+        def get_rank(x, key):
+            return x['ranks'][key]
+
+        result = tools.Table(just='left')
+
+        result.append(['', *[(await get_username(x)) for x in user_data]])
+        
+        for mode in user_data[0]['ranks'].keys():
+            row = [mode]
+            for user in user_data:
+                row.append(get_rank(user, mode))
+
+            result.append(row)
 
         await ctx.channel.send(f'```{str(result)}```')
 

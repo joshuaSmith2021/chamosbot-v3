@@ -84,7 +84,9 @@ class Splatoon(commands.Cog):
                 current_stage_strings = splatoon.stages_notification([schedule[x][0] for x in keys], **stage_formatting)
                 remaining_time = schedule['regular'][0].end - datetime.datetime.now()
 
-                await ctx.channel.send('Current Rotation ({0} remaining)\n{1}'.format(tools.format_delta(remaining_time, 'hm'), '\n'.join(current_stage_strings)))
+                embed = discord.Embed(title='Current Rotation', description=f'{tools.format_delta(remaining_time, "hm")} remaining', color=random.choice(splatoon.COLORS))
+                [embed.add_field(name=mode, value=details, inline=True) for mode, details in [x.split(': ') for x in current_stage_strings]]
+                await ctx.channel.send(embed=embed)
 
             else:
                 schedule = splatoon.combine_gamemodes(schedule)
@@ -108,22 +110,24 @@ class Splatoon(commands.Cog):
                     await ctx.channel.send('No results found. Please try making your request less specific by removing filters.')
                     return
 
-                def make_stage_string(stage):
+                def make_stage_strings(stage):
 
                     remaining, status = stage.duration_remaining()
 
-                    return ' '.join([
-                        stage.gamemode[0],
-                        stage.ruleset[0],
-                        ' '.join(map(str, stage.stages)),
-                        f'({tools.format_delta(remaining, "hm")}',
-                        f'{status})',
-                    ])
+                    return (
+                        f'{stage.gamemode[0]}\n{stage.ruleset[0]}',
+                        '\n'.join([
+                            '\n'.join(map(str, stage.stages)),
+                            f'({tools.format_delta(remaining, "hm")} {status})'
+                        ])
+                    )
 
-                stage_strings = map(make_stage_string, schedule)
-                result = '\n'.join(stage_strings)
+                stage_strings = map(make_stage_strings, schedule)
 
-                await ctx.channel.send(result if len(result) < 2000 else f'The resulting message is too long! ({len(result)} characters) Try making your request more specific by adding filters.')
+                embed = discord.Embed(title='Upcoming Stages', color=random.choice(splatoon.COLORS))
+                [embed.add_field(name=mode, value=details, inline=True) for mode, details in stage_strings]
+
+                await ctx.channel.send(embed=embed)
 
     @commands.command(aliases=['sr', 'salmon'])
     async def salmonrun(self, ctx):
@@ -135,12 +139,15 @@ class Splatoon(commands.Cog):
             tf = '%-I:%M %p'
             time_range = ' – '.join([f'{x.strftime(tf)} {tools.get_today_tomorrow(x)}' for x in [shift.start, shift.end]])
             remaining, status = shift.duration_remaining()
-            return f'{time_range} ({tools.format_delta(remaining, "dhm")} {status})'
+            return (time_range, f'{tools.format_delta(remaining, "dhm")} {status}')
+            # return f'{time_range} ({tools.format_delta(remaining, "dhm")} {status})'
 
-        shift_strings = '\n'.join(map(make_shift_string, schedule))
-        message = f'Upcoming Salmon Runs\n{shift_strings}\nAll times are shown in Los Angeles Time.'
+        embed = discord.Embed(title="Upcoming Salmon Runs", color=random.choice(splatoon.COLORS))
+        embed.set_footer(text="All times are shown in Los Angeles time.")
 
-        await ctx.channel.send(message)
+        [embed.add_field(name=time_range, value=status, inline=False) for time_range, status in map(make_shift_string, schedule)]
+
+        await ctx.channel.send(embed=embed)
 
     @commands.command()
     async def register(self, ctx):

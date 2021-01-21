@@ -241,7 +241,7 @@ class Splatoon(commands.Cog):
 
         await ctx.channel.send(f'```{str(result)}```')
 
-    @commands.command(aliases=['ranking'])
+    @commands.command(aliases=['ranking', 'ranks'])
     async def rank(self, ctx, *args):
         '''Get ranks for users.
         args is multiple arguments separated by spaces. Each argument must be a:

@@ -394,3 +394,13 @@ def enter_cookie():
     while len(new_cookie) != 40:
         new_cookie = input("Cookie is invalid. Please enter it again.\nCookie: ")
     return new_cookie
+
+if __name__ == '__main__':
+    # for dev purposes
+    exit()
+    with open('data/users/nintendo_keys.json') as file_:
+        user_keys = json.loads(file_.read())
+
+    user = user_keys[discord_id]
+    cookie = get_cookie(user['session_token'])
+    print(cookie)

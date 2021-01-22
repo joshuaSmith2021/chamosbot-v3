@@ -200,7 +200,7 @@ class Splatoon(commands.Cog):
             return
 
         for i, user in enumerate(user_data):
-            results = splatoon.get_past_games(user['cookie'])
+            results = splatoon.get_results(user)
             results['matches'] = [splatoon.Match(x) for x in results['results']]
             user_data[i]['results'] = results
 
@@ -276,7 +276,7 @@ class Splatoon(commands.Cog):
             return
 
         for i, user in enumerate(user_data):
-            records = splatoon.get_records(user['cookie'])
+            records = splatoon.get_records(user)
             user_data[i]['ranks'] = splatoon.get_ranks(records)
 
         if len(user_data) == 1:

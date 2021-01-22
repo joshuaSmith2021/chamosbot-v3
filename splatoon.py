@@ -3,6 +3,7 @@ import json
 
 import requests
 
+import iksm
 import tools
 
 BASE_URL = 'http://localhost:8080'
@@ -46,7 +47,7 @@ class Weapon:
         return self.__str__()
 
 
-def get_weapons(weapons):
+def get_salmon_weapons(weapons):
     result = []
     for weapon in weapons:
         key = [x for x in weapon.keys() if x not in ['image', 'id', 'name', 'thumbnail']][0]
@@ -128,7 +129,7 @@ class SalmonScheduleItem(GenericScheduleItem):
         self.stage = entry['stage']['name']
         self.start = datetime.datetime.fromtimestamp(int(entry['start_time']))
         self.end = datetime.datetime.fromtimestamp(int(entry['end_time']))
-        self.weapons = get_weapons(entry['weapons'])
+        self.weapons = get_salmon_weapons(entry['weapons'])
 
     def __str__(self):
         time_range = self.time_range()
@@ -217,17 +218,36 @@ def get_schedule_objects():
     return {key: value for key, value in [(mode, [ScheduleItem(x) for x in entries]) for mode, entries in get_schedule().items()]}
 
 
-def get_past_games(cookie):
-    url = 'https://app.splatoon2.nintendo.net/api/results'
-    headers = {'Cookie': cookie}
+def call_splatoon_api(path, user):
+    url = f'https://app.splatoon2.nintendo.net{path}'
+    cookie = user['cookie']
     req = requests.get(url, cookies={'iksm_session': cookie})
+
+    if 'code' in req.json().keys():
+        # cookie expired, get a new one
+        nickname, new_cookie = iksm.get_cookie(user['session_token'])
+
+        iksm.update_users({user['uid']: {'cookie': new_cookie}})
+
+        req = requests.get(url, cookies={'iksm_session': new_cookie})
+
     return req.json()
 
 
-def get_records(cookie):
-    url = 'https://app.splatoon2.nintendo.net/api/records'
-    req = requests.get(url, cookies={'iksm_session': cookie})
-    return req.json()
+def get_matches(results):
+    return [Match(x) for x in results['results']]
+
+
+def get_weapons(matches):
+    return [x.weapon for x in matches]
+
+
+def get_results(user):
+    return call_splatoon_api('/api/results', user)
+
+
+def get_records(user):
+    return call_splatoon_api('/api/records', user)
 
 
 def get_ranks(records):
@@ -242,6 +262,5 @@ def get_ranks(records):
 
 
 if __name__ == '__main__':
-    records = get_records('04d5fb0f23e9d12a8164cdfc0eb028df06a766e4')
-    print(get_ranks(records))
+    pass
 

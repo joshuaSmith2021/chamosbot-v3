@@ -1,4 +1,5 @@
 import datetime
+import json
 import random
 import re
 import statistics
@@ -133,19 +134,27 @@ class Splatoon(commands.Cog):
     async def salmonrun(self, ctx):
         '''Get Salmon Run schedule.
         '''
-        schedule = [splatoon.GenericScheduleItem(x) for x in splatoon.get_salmon_schedule()['schedules']]
+        salmon_schedule = splatoon.get_salmon_schedule()
+
+        weapons = {str(x['start_time']): [y['weapon' if 'weapon' in y.keys() else 'coop_special_weapon']['name'] for y in x['weapons']] for x in salmon_schedule['details']}
+        schedule = [splatoon.GenericScheduleItem(x) for x in salmon_schedule['schedules']]
 
         def make_shift_string(shift):
             tf = '%-I:%M %p'
             time_range = ' – '.join([f'{x.strftime(tf)} {tools.get_today_tomorrow(x)}' for x in [shift.start, shift.end]])
             remaining, status = shift.duration_remaining()
             return (time_range, f'{tools.format_delta(remaining, "dhm")} {status}')
-            # return f'{time_range} ({tools.format_delta(remaining, "dhm")} {status})'
 
         embed = discord.Embed(title="Upcoming Salmon Runs", color=random.choice(splatoon.COLORS))
         embed.set_footer(text="All times are shown in Los Angeles time.")
 
-        [embed.add_field(name=time_range, value=status, inline=False) for time_range, status in map(make_shift_string, schedule)]
+        for block in schedule:
+            time_range, status = make_shift_string(block)
+            weapon_list = weapons.get(str(block.start_stamp), None)
+            if weapon_list is not None:
+                status = '\n'.join(['Weapons:', *weapon_list, status])
+
+            embed.add_field(name=time_range, value=status, inline=False)
 
         await ctx.channel.send(embed=embed)
 
@@ -307,6 +316,48 @@ class Splatoon(commands.Cog):
             result.append(row)
 
         await ctx.channel.send(f'```{str(result)}```')
+
+    @commands.command()
+    async def salmonrank(self, ctx, *args):
+        '''IN DEVELOPMENT
+
+        Get Salmon Run ranks for users.
+        args is multiple arguments separated by spaces. Each argument must be a:
+        Discord user mention (@user): If the mentioned user has linked their Nintendo account to Discord
+        If multiple users are given, the response is formatted in a table with all of their ranks side-by-side.
+        If one user is given, the response is a prettier embed with their rankings.
+        '''
+
+        mention_pattern = r'<@!?(\d+)>'
+        mention_matches = [x for x in args if re.match(mention_pattern, x) is not None]
+        user_ids = [int(re.match(mention_pattern, x).group(1)) for x in mention_matches]
+
+        if (aid := ctx.author.id) not in user_ids and len(user_ids) == 0:
+            user_ids.append(aid)
+
+        unregistered_users = []
+        user_data = []
+        for uid in user_ids:
+            data = iksm.get_user(uid)
+            if data is None:
+                unregistered_users.append(uid)
+                continue
+
+            user_data.append(dict(uid=uid, **data))
+
+        for i, data in enumerate(user_data):
+            if data.get('cookie', None) is None:
+                del user_data[i]
+                unregistered_users.append(data['uid'])
+
+        if len(user_data) == 0:
+            await ctx.channel.send('None of the given users have linked their accounts with chamosbot. See `>help register` for more details.')
+            return
+
+        for i, user in enumerate(user_data):
+            results = splatoon.get_salmon_results(user)
+            with open('data/responses/salmon-results.json', 'w') as f:
+                f.write(json.dumps(results))
 
 
 class Development(commands.Cog):

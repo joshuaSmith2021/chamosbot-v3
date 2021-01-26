@@ -5,6 +5,9 @@
 # bot users to login to the Nintendo API to see their own #
 # stats.                                                  #
 #                                                         #
+# Some modifications were made to the original file in    #
+# order to adapt it to the Discord bot flow.              #
+#                                                         #
 ###########################################################
 
 # eli fessler
@@ -15,6 +18,8 @@ import requests, json, re, sys
 import os, base64, hashlib
 import uuid, time, random, string
 
+import firestore_handler as firestore
+
 session = requests.Session()
 version = "unknown"
 data_file = 'data/users/nintendo_keys.json'
@@ -24,11 +29,40 @@ if getattr(sys, 'frozen', False):
     app_path = os.path.dirname(sys.executable)
 elif __file__:
     app_path = os.path.dirname(__file__)
-config_path = os.path.join(app_path, "config.txt")
+    config_path = os.path.join(app_path, "config.txt")
+
+def user_exists(aid):
+    aid = str(aid)
+    existing_documents = firestore.list_documents('users')
+    doc_ids = [x['name'].split('/')[-1] for x in existing_documents['documents']]
+    return aid in doc_ids
+
+
+def save_user(aid, **kwargs):
+    aid = str(aid)
+    if user_exists(aid):
+        # User already has document, so patch the existing one
+        request = firestore.update_document('users', aid, firestore.make_fields(kwargs))
+    else:
+        # User does not have a document, so create one
+        request = firestore.create_document('users', aid, firestore.make_fields(kwargs))
+
+    return request
+
 
 def get_user(aid):
-    data = json.loads(open(data_file).read())
-    return data.get(str(aid), None)
+    document = firestore.get_document('users', str(aid))
+    result = {}
+    try:
+        for key, pair in document['fields'].items():
+            value = list(pair.values())[0]
+            result[key] = value
+    except KeyError:
+        # Data does not exist
+        return None
+
+    return result
+
 
 def update_users(new_data):
     old_data = json.loads(open(data_file).read())
@@ -93,21 +127,22 @@ def log_in(ctx, ver='1.5.7'):
     message_lines.append('For help: https://youtu.be/4RD-3L7_vQI')
 
     user_data = {
-        str(ctx.author.id): {
-                'auth_code_verifier': auth_code_verifier.decode('utf-8')
-            }
+        'auth_code_verifier': auth_code_verifier.decode('utf-8')
     }
 
-    update_users(user_data)
+    save_user(str(ctx.author.id), **user_data)
 
     return '\n'.join(message_lines)
 
 def check_link(ctx, url):
+    if not user_exists(ctx.author.id):
+        return 'You don\'t seem to have a data file on our servers. Please use `>register`.'
+
     user_data = get_user(str(ctx.author.id))
-    if user_data is None:
-        return 'Auth code verifier not found in our records. Please use `>register`'
 
     auth_code_verifier = user_data.get('auth_code_verifier', None)
+    if auth_code_verifier is None:
+        return 'You don\'t have auth_code_verifier in your data. Please use `>register`'
 
     try:
         use_account_url = url
@@ -124,7 +159,7 @@ def check_link(ctx, url):
     user_data['cookie'] = cookie
     user_data['nickname'] = nickname
 
-    update_users({str(ctx.author.id): user_data})
+    save_user(ctx.author.id, **user_data)
 
     return f'Hello, {nickname}! Your account is now linked and you can use account-specific commands.'
 
@@ -397,6 +432,8 @@ def enter_cookie():
 
 if __name__ == '__main__':
     # for dev purposes
+    print(get_user('does not exist'))
+    print(get_user('580157651548241940'))
     exit()
     with open('data/users/nintendo_keys.json') as file_:
         user_keys = json.loads(file_.read())

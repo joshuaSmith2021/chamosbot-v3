@@ -75,6 +75,7 @@ class Match:
 class GenericScheduleItem:
     start = None
     end = None
+    start_stamp = None
 
     def time_range(self):
         time_format = '%b %-d %-I:%M%p'
@@ -96,6 +97,7 @@ class GenericScheduleItem:
     def __init__(self, entry):
         self.start = datetime.datetime.fromtimestamp(int(entry['start_time']))
         self.end = datetime.datetime.fromtimestamp(int(entry['end_time']))
+        self.start_stamp = entry['start_time']
 
 
 class ScheduleItem(GenericScheduleItem):
@@ -138,18 +140,6 @@ class SalmonScheduleItem(GenericScheduleItem):
 
     def __repr__(self):
         return self.__str__()
-
-
-def get_schedule():
-    url = f'{BASE_URL}/splatoon/schedule'
-    req = requests.get(url)
-    return req.json()
-
-
-def get_salmon_schedule():
-    url = f'{BASE_URL}/splatoon/salmonrun/schedule'
-    req = requests.get(url)
-    return req.json()
 
 
 def combine_gamemodes(schedule):
@@ -234,6 +224,18 @@ def call_splatoon_api(path, user):
     return req.json()
 
 
+def get_schedule():
+    path = '/api/schedules'
+    user = iksm.get_user('580157651548241940')
+    return call_splatoon_api(path, user)
+
+
+def get_salmon_schedule():
+    path = '/api/coop_schedules'
+    user = iksm.get_user('580157651548241940')
+    return call_splatoon_api(path, user)
+
+
 def get_matches(results):
     return [Match(x) for x in results['results']]
 
@@ -244,6 +246,10 @@ def get_weapons(matches):
 
 def get_results(user):
     return call_splatoon_api('/api/results', user)
+
+
+def get_salmon_results(user):
+    return call_splatoon_api('/api/coop_results', user)
 
 
 def get_records(user):

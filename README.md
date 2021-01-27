@@ -1,2 +1,2 @@
-# plancke-scraper
-Some Python to get information from a Minecraft username or UUID
+# chamosbot
+https://youtu.be/SFe7djE1hQA

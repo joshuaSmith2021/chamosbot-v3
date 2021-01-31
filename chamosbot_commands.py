@@ -385,11 +385,16 @@ class Technology(commands.Cog):
 
     @commands.group(aliases=['gpu'])
     async def gpus(self, ctx):
-        '''Get graphics card comparisons.
+        '''Commands with information about graphics cards.
         '''
         if ctx.invoked_subcommand is not None:
             return
 
+
+    @gpus.command(name='list')
+    async def _list(self, ctx):
+        '''List every Radeon and GeForce GPU and organize by power.
+        '''
         embed=discord.Embed(title="Graphics Card Ranking", url="https://www.logicalincrements.com/articles/graphicscardcomparison")
         embed.set_footer(text="All %'s are compared to GTX 1080 Ti, rounded to the nearest 5%.")
 
@@ -462,7 +467,7 @@ class Technology(commands.Cog):
         embed.add_field(name='Slightly Stronger Cards', value='\n'.join(cards_[better_power]) if better_power else 'None', inline=False)
         embed.add_field(name='Slightly Weaker Cards', value='\n'.join(cards_[weaker_power]) if weaker_power else 'None', inline=False)
 
-        embed.set_footer(text=f'Similar searches: {tools.english_list([x[1] for x in possible_matches])}')
+        embed.set_footer(text=f'Similar searches: {tools.english_list([x[1] for x in possible_matches[1:]])}')
 
         await ctx.send(embed=embed)
 

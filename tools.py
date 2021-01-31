@@ -79,6 +79,9 @@ def parse_monthly_data(string):
 
 
 def english_list(_list, andor='and'):
+    if len(_list) == 0:
+        return 'None'
+
     _list = [str(x) for x in _list]
     if len(_list) == 0:
         return ''

@@ -383,10 +383,13 @@ class Technology(commands.Cog):
         '''
         await ctx.channel.send(str(uuid.uuid4()))
 
-    @commands.command()
+    @commands.group(aliases=['gpu'])
     async def gpus(self, ctx):
         '''Get graphics card comparisons.
         '''
+        if ctx.invoked_subcommand is not None:
+            return
+
         embed=discord.Embed(title="Graphics Card Ranking", url="https://www.logicalincrements.com/articles/graphicscardcomparison")
         embed.set_footer(text="All %'s are compared to GTX 1080 Ti, rounded to the nearest 5%.")
 
@@ -395,6 +398,71 @@ class Technology(commands.Cog):
         for power in sorted(map(int, cards.keys()), reverse=True):
             cardset = cards[str(power)]
             embed.add_field(name=f'{power}%', value='\n'.join(cardset), inline=True)
+
+        await ctx.send(embed=embed)
+
+    def similarity_check(self, card, x):
+        similarity_score = tools.similar
+        x = x.upper()
+        params = x.split()
+
+        if similarity_score(card.upper(), x.upper()) >= 0.7:
+            return True
+        elif (match := re.search(r'(?P<prefix>[^\d]*)(?P<number>\d*)(?P<suffix>[\d*]*)', card)):
+            group = match.groupdict()
+            for param in group.values():
+                if param.upper() in params and param != '':
+                    return True
+
+
+    @gpus.command()
+    async def search(self, ctx, *card):
+        '''Compare a GPU to similarly-performing GPUs.
+        '''
+        card = ' '.join(card)
+        cards_ = tools.get_graphics_cards()
+        all_cards = []
+        for cardset in cards_.values():
+            all_cards += cardset
+
+        similar = tools.similar
+
+        possible_matches = sorted([(similar(card.upper(), x.upper()), x) for x in all_cards if self.similarity_check(card, x)], reverse=True)
+
+        try:
+            top = possible_matches[0]
+        except IndexError:
+            ctx.channel.send('No graphics cards matched your query.')
+            return
+
+        power = [x for x in cards_.keys() if top[1] in cards_[x]][0]
+        keys = sorted(map(int, cards_.keys()))
+        ranking = keys.index(int(power))
+
+        try:
+            better_power = str(keys[ranking + 1])
+        except IndexError:
+            better_power = None
+
+        try:
+            weaker_power = str(keys[ranking - 1])
+            if ranking - 1 < 0:
+                # Set it to none, otherwise the strongest
+                # cards will appear to be weaker than the
+                # weakest cards
+                weaker_power = None
+
+        except IndexError:
+            weaker_power = None
+
+        embed=discord.Embed(title=top[1], url=f'https://amazon.com/s?k={top[1].replace(" ", "%20")}%20gpu', description='Other similarly performing cards')
+
+        embed.add_field(name='Similarly Performing Cards', value='\n'.join(cards_[power]), inline=False)
+
+        embed.add_field(name='Slightly Stronger Cards', value='\n'.join(cards_[better_power]) if better_power else 'None', inline=False)
+        embed.add_field(name='Slightly Weaker Cards', value='\n'.join(cards_[weaker_power]) if weaker_power else 'None', inline=False)
+
+        embed.set_footer(text=f'Similar searches: {tools.english_list([x[1] for x in possible_matches])}')
 
         await ctx.send(embed=embed)
 

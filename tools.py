@@ -2,7 +2,9 @@ import datetime
 import re
 from subprocess import check_output
 
+from bs4 import BeautifulSoup
 import pytz
+import requests
 
 import matrix
 
@@ -137,12 +139,52 @@ def get_ip_address():
     return search.group(2)
 
 
+def clean_list(cards):
+    bad = ['', '\t', '\n', '<br/>']
+    result = []
+    for text in cards:
+        if text not in bad:
+            result.append(re.sub(r'<.*?>', '', text))
+
+    return result
+
+
+def parse_cards(cards):
+    return clean_list(re.split(r'(\n|\t|<br/>)+', cards))
+
+
+def get_graphics_cards():
+    url = 'https://backend.logicalincrements.com/api/articles/graphicscardcomparison'
+    request = requests.get(url)
+
+    data = request.json()
+    content = ''.join([x['content'] for x in data['payload']['sections']])
+
+    soup = BeautifulSoup(content, 'html.parser')
+
+    pattern = r'<td.+?<div class="comparison-gaming-number">(?P<power>\d+)%</div>\n</div>(?P<cards>.+?)</td>'
+
+    result = {}
+
+    for el in soup.find_all('td'):
+        match = re.match(pattern, str(el), re.DOTALL)
+        if match is None:
+            continue
+
+        data = match.groupdict()
+
+        power = data['power']
+        cards = parse_cards(data['cards'])
+
+        if power in result.keys():
+            result[power] += cards
+        else:
+            result[power] = cards
+
+    return result
+
+
 if __name__ == '__main__':
-    # for tz in [x for x in pytz.all_timezones if 'America' in x]:
-    #     print(tz)
-    # exit()
-    now = datetime.datetime.now()
-    localized_times = get_localized_times(now)
-    print(localized_times)
-    tf = '%-I:%M'
-    print(' '.join([x.strftime(tf) for x in localized_times]))
+    cards = get_graphics_cards()
+    print(cards)
+

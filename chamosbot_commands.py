@@ -372,12 +372,32 @@ class Development(commands.Cog):
         result = tools.get_ip_address().split('.')[-1]
         await ctx.channel.send(result)
 
+
+class Technology(commands.Cog):
+    '''Tech-related commands
+    '''
+
     @commands.command()
     async def uuid(self, ctx):
         '''Generate a UUID using Python's uuid.uuid4 function.
         '''
         await ctx.channel.send(str(uuid.uuid4()))
 
+    @commands.command()
+    async def gpus(self, ctx):
+        '''Get graphics card comparisons.
+        '''
+        embed=discord.Embed(title="Graphics Card Ranking", url="https://www.logicalincrements.com/articles/graphicscardcomparison")
+        embed.set_footer(text="All %'s are compared to GTX 1080 Ti, rounded to the nearest 5%.")
 
-COGS = [Bedwars, Splatoon, Development, Support]
+        cards = tools.get_graphics_cards()
+
+        for power in sorted(map(int, cards.keys()), reverse=True):
+            cardset = cards[str(power)]
+            embed.add_field(name=f'{power}%', value='\n'.join(cardset), inline=True)
+
+        await ctx.send(embed=embed)
+
+
+COGS = [Bedwars, Splatoon, Development, Support, Technology]
 

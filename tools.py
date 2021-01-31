@@ -1,4 +1,5 @@
 import datetime
+from difflib import SequenceMatcher
 import re
 from subprocess import check_output
 
@@ -77,17 +78,17 @@ def parse_monthly_data(string):
     return result
 
 
-def english_list(_list):
+def english_list(_list, andor='and'):
     _list = [str(x) for x in _list]
     if len(_list) == 0:
         return ''
     elif len(_list) == 1:
         return _list[0]
     elif len(_list) == 2:
-        return ' and '.join(_list)
+        return f' {andor} '.join(_list)
     else:
         body = ', '.join(_list[:-1])
-        result = f'{body}, and {_list[-1]}'
+        result = f'{body}, {andor} {_list[-1]}'
         return result
 
 
@@ -137,6 +138,10 @@ def get_ip_address():
     sections = ifconfig.split('\n\n')
     search = re.search(r'(inet) (192.168.1.\d+)', sections[-1])
     return search.group(2)
+
+
+def similar(a, b):
+    return SequenceMatcher(None, a, b).ratio()
 
 
 def clean_list(cards):

@@ -8,6 +8,7 @@ import uuid
 import discord
 from discord.ext import commands
 
+import chess
 import hypixel
 import iksm
 import splatoon
@@ -373,6 +374,27 @@ class Development(commands.Cog):
         await ctx.channel.send(result)
 
 
+class Chess(commands.Cog):
+    '''Commands for chess.com
+    '''
+
+    @commands.group()
+    async def chess(self, ctx):
+        pass
+
+    @chess.command()
+    async def stats(self, ctx, *usernames):
+        user_stats = list(filter(lambda x: x is not None, [chess.get_user_stats(x) for x in usernames]))
+
+        if len(user_stats) == 1:
+            embed = chess.build_embed(discord.Embed(title=usernames[0]), user_stats[0])
+            await ctx.channel.send(embed=embed)
+        elif len(user_stats) == 0:
+            await ctx.channel.send('No valid usernames provided.')
+        else:
+            await ctx.channel.send('Requesting multiple usernames in one command is not supported yet. Please do one at a time.')
+
+
 class Technology(commands.Cog):
     '''Tech-related commands
     '''
@@ -472,5 +494,5 @@ class Technology(commands.Cog):
         await ctx.send(embed=embed)
 
 
-COGS = [Bedwars, Splatoon, Development, Support, Technology]
+COGS = [Bedwars, Splatoon, Development, Support, Technology, Chess]
 

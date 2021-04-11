@@ -36,6 +36,9 @@ class Bedwars(commands.Cog):
 
         async with ctx.channel.typing():
             table = hypixel.get_bedwars_table(usernames)
+            if isinstance(table, discord.Embed):
+                await ctx.channel.send(embed=table)
+                return
             await ctx.channel.send(f'```{table}```')
 
 

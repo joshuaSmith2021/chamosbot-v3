@@ -11,6 +11,7 @@ from abc import ABC, abstractmethod
 import grequests
 import requests
 from bs4 import BeautifulSoup, SoupStrainer
+from discord import Embed as DiscordEmbed
 import matrix
 import mojang
 import tools
@@ -21,6 +22,35 @@ API_KEY = json.loads(open('credentials.json').read())['apikey']
 
 class HypixelUsernameError(mojang.MinecraftUsernameError):
     pass
+
+
+def build_embed(player):
+    stats = player.get_stats()
+
+    embed=DiscordEmbed(title=player.username, url=f"https://plancke.io/hypixel/player/stats/{player.uuid}", description=f"{stats['Overall']['Level']} stars")
+
+    modes = [
+        'Core Modes', 'Solo', 'Doubles', '3v3v3v3', '4v4v4v4', 'Overall'
+    ]
+
+    fields = [
+        '^Wins$ #Wins', '^W/L$ #W/L', '^Kills$ #Kills', '^K/D$ #K/D',
+        '^Final Kills$ #Final Kills', '^Final K/D$ #Final K/D', '^Kills$ + ^Final Kills$ #Total Kills',
+        '^Beds Broken$ # Beds Broken'
+    ]
+
+    for mode in modes:
+        current = stats[mode]
+        rows = []
+        for field in fields:
+            stat, key = field.split('#')
+            plugged = re.sub(r'\^[^^$]+\$', lambda x: current[x.group()[1:-1]], stat)
+            evaluated = eval(plugged.replace(',', ''))
+            rows.append(f'{evaluated} {key}')
+
+        embed.add_field(name=mode, value='\n'.join(rows), inline=True)
+
+    return embed
 
 
 def stat_table(players):
@@ -315,6 +345,9 @@ def get_bedwars_table(usernames, gamemode=None, stat_class=None):
 
     for i in range(len(players)):
         players[i].plancke_page = ress[i].text
+
+    if len(players) == 1:
+        return build_embed(players[0])
 
     table = stat_table(players)
     table = tools.sort_table(table, 1)
